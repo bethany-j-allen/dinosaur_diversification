@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beast version="2.5" namespace="beast.core
+                                :beast.core.parameter
+                                :beast.evolution.tree.coalescent
+                                :beast.core.util
+                                :beast.evolution.operators
+                                :bdmmprime.distribution
+                                :bdmmprime.parameterization
+                                :bdmmprime.util.operators
+                                :bdmmprime.util.priors
+                                :feast.fileio">
+
+  <map name="Uniform" >beast.math.distributions.Uniform</map>
+  <map name="Exponential" >beast.math.distributions.Exponential</map>
+  <map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
+  <map name="Normal" >beast.math.distributions.Normal</map>
+  <map name="Beta" >beast.math.distributions.Beta</map>
+  <map name="Gamma" >beast.math.distributions.Gamma</map>
+  <map name="LaplaceDistribution" >beast.math.distributions.LaplaceDistribution</map>
+  <map name="prior" >beast.math.distributions.Prior</map>
+  <map name="InverseGamma" >beast.math.distributions.InverseGamma</map>
+  <map name="OneOnX" >beast.math.distributions.OneOnX</map>
+
+  <tree id="tree"
+        spec="feast.fileio.TreeFromNewickFile" fileName="$(tree_file)"
+        IsLabelledNewick="true" adjustTipHeights="false">
+  </tree>
+
+  <taxa id="taxa" spec="TaxonSetFromTree">
+    <!-- We need a separate tree object to the above, since including a
+         tree here that is part of the posterior results in beast producing
+         scary DEVELOPER ERROR messages... -->
+    <tree spec="feast.fileio.TreeFromNewickFile" fileName="$(tree_file)"
+          IsLabelledNewick="true" adjustTipHeights="false" estimate="false"/>
+  </taxa>
+
+  <changeTimes id="changeTimes" spec="RealParameter" value="23.8 55.4 79.0 95.5 108.7 135.4 171.0"/>
+
+  <!-- This will be set by the initialiser. -->
+  <fso id="fso" spec="RealParameter" value="0.0"/>
+
+  <run id="mcmc" spec="MCMC" chainLength="200000000">
+    <state id="state" storeEvery="10000">
+      <parameter id="birthRate" lower="0.0" name="stateNode" dimension="8">1.0</parameter>
+      <parameter id="deathRate" lower="0.0" name="stateNode" dimension="8">1.0</parameter>
+      <parameter id="samplingRate" lower="0.0" name="stateNode" dimension="8">0.5</parameter>
+      <parameter id="originFBD" lower="0.0" name="stateNode">200.0</parameter>
+      <stateNode idref="fso"/>
+      <stateNode idref="tree"/>
+    </state>
+
+    <init spec="TipDateInitialiser" tree="@tree" finalSampleOffset="@fso"
+          adjustInternalNodes="true" internalNodeSpacing="1">
+      <tipDatesTrait spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                     traitValueCol="2" traitname="age" taxa="@taxa" skipFirstRow="true"/>
+    </init>
+
+    <distribution id="posterior" spec="util.CompoundDistribution">
+      <distribution id="likelihood" spec="util.CompoundDistribution">
+        <distribution spec="BirthDeathMigrationDistribution" id="FBD"
+                      tree="@tree" finalSampleOffset="@fso"
+                      conditionOnSurvival="true">
+          <parameterization spec="CanonicalParameterization"
+                            processLength="@originFBD" >
+            <birthRate spec="SkylineVectorParameter"
+                       changeTimes="@changeTimes" skylineValues="@birthRate"
+                       timesAreAges="true" processLength="@originFBD" />
+            <deathRate spec="SkylineVectorParameter"
+                       changeTimes="@changeTimes" skylineValues="@deathRate"
+                       timesAreAges="true" processLength="@originFBD" />
+            <samplingRate spec="SkylineVectorParameter"
+                       changeTimes="@changeTimes" skylineValues="@samplingRate"
+                       timesAreAges="true" processLength="@originFBD" />
+            <removalProb spec="SkylineVectorParameter">
+              <skylineValues spec="RealParameter" value="0.0"/>
+            </removalProb>
+          </parameterization>
+        </distribution>
+      </distribution>
+
+      <distribution id="prior" spec="util.CompoundDistribution">
+        <prior id="birthRatePrior" name="distribution" x="@birthRate">
+          <Exponential name="distr">
+            <parameter id="RealParameter.0" spec="parameter.RealParameter" estimate="false" name="mean">1.0</parameter>
+          </Exponential>
+        </prior>
+        <prior id="originPriorFBD" name="distribution" x="@originFBD">
+          <Uniform name="distr" upper="200"/>
+        </prior>
+        <prior id="samplingRatePrior" name="distribution" x="@samplingRate">
+          <Exponential name="distr">
+            <parameter id="RealParameter.1" spec="parameter.RealParameter" estimate="false" name="mean">0.2</parameter>
+          </Exponential>
+        </prior>
+        <prior id="deathRatePrior" name="distribution" x="@deathRate">
+          <Exponential name="distr">
+            <parameter id="RealParameter.2" spec="parameter.RealParameter" estimate="false" name="mean">1.0</parameter>
+          </Exponential>
+        </prior>
+      </distribution>
+
+      <distribution id="tipBounds" spec="TipDatePrior" tree="@tree" finalSampleOffset="@fso">
+        <earlierBound spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                      skipFirstRow="true" traitValueCol="1" traitname="age" taxa="@taxa"/>
+        <laterBound spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                     skipFirstRow="true" traitValueCol="2" traitname="age" taxa="@taxa"/>
+      </distribution>
+    </distribution>
+
+    <operator id="originScalerFBD" spec="ScaleOperator" parameter="@originFBD" scaleFactor="0.75" weight="3.0"/>
+    <operator id="birthRateScaler" spec="ScaleOperator" parameter="@birthRate" scaleFactor="0.75" weight="10.0"/>
+    <operator id="deathRateScaler" spec="ScaleOperator" parameter="@deathRate" scaleFactor="0.75" weight="10.0"/>
+    <operator id="samplingRateScaler" spec="ScaleOperator" parameter="@samplingRate" scaleFactor="0.75" weight="10.0"/>
+    <operator id="birthRateScaleAll" spec="ScaleOperator" parameter="@birthRate" scaleFactor="0.75" scaleAll="true" weight="10.0"/>
+    <operator id="deathRateScaleAll" spec="ScaleOperator" parameter="@deathRate" scaleFactor="0.75" scaleAll="true" weight="10.0"/>
+    <operator id="samplingRateScaleAll" spec="ScaleOperator" parameter="@samplingRate" scaleFactor="0.75" scaleAll="true" weight="10.0"/>
+
+    <operator id="scaleAllOperator" spec="UpDownOperator" scaleFactor="0.75" weight="10.0">
+      <up idref="birthRate"/>
+      <up idref="deathRate"/>
+      <down idref="samplingRate"/>
+    </operator>
+
+    <operator id="tipDateOperator" spec="TipDateOperator"
+              tree="@tree" finalSampleOffset="@fso" windowSize="20"
+              weight="10"/>
+
+    <!-- estimate internal nodes ages -->
+    <operator id="fsoScaler" spec="ScaleOperator" parameter="@fso" scaleFactor="0.75" weight="3"/>
+    <operator id="nodeHeightOperator" spec="Uniform" tree="@tree" weight="10"/>
+    <operator id="treeScaler" spec="ScaleOperator" tree="@tree" scaleFactor="0.75" weight="10"/>
+    <operator id="treeScalerRoot" spec="ScaleOperator" rootOnly="true" tree="@tree" scaleFactor="0.75" weight="10"/>
+
+    <logger id="tracelog" fileName="results/$(filebase).$(tree_name).log" logEvery="20000" model="@posterior" sanitiseHeaders="true" sort="smart">
+      <log idref="posterior"/>
+      <log idref="likelihood"/>
+      <log idref="prior"/>
+      <log idref="FBD"/>
+      <log idref="birthRate"/>
+      <log idref="deathRate"/>
+      <log idref="samplingRate"/>
+      <log idref="originFBD"/>
+      <log idref="fso"/>
+    </logger>
+
+    <logger id="treelog" fileName="results/$(filebase).$(tree_name).trees" logEvery="100000">
+      <log idref="tree"/>
+    </logger>
+
+    <logger id="screenlog" logEvery="20000">
+      <log idref="posterior"/>
+      <log idref="likelihood"/>
+      <log idref="prior"/>
+      <log idref="fso"/>
+    </logger>
+  </run>
+</beast>

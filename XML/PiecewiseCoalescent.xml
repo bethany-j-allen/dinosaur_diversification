@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beast version="2.5" namespace="beast.core
+                               :beast.evolution.tree.coalescent
+                               :beast.core.util
+                               :beast.core.parameter
+                               :beast.math.distributions
+                               :beast.evolution.operators
+                               :bdmmprime.util.operators
+                               :bdmmprime.util.priors
+                               :feast.fileio">
+
+    <map name="Normal" >beast.math.distributions.Normal</map>
+    <map name="Uniform" >beast.math.distributions.Uniform</map>
+    <map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
+
+    <tree id="tree"
+      spec="feast.fileio.TreeFromNewickFile" fileName="$(tree_file)"
+      IsLabelledNewick="true" adjustTipHeights="false" />
+
+    <taxa id="taxa" spec="TaxonSetFromTree">
+      <!-- We need a separate tree object to the above, since including a
+           tree here that is part of the posterior results in beast producing
+           scary DEVELOPER ERROR messages... -->
+      <tree spec="feast.fileio.TreeFromNewickFile" fileName="$(tree_file)"
+            IsLabelledNewick="true" adjustTipHeights="false" estimate="false"/>
+    </taxa>
+
+    <changeTimes id="changeTimes" spec="RealParameter" value="23.8 55.4 79.0 95.5 108.7 135.4 171.0"/>
+
+    <!-- This will be set by the initialiser. -->
+    <fso id="fso" spec="RealParameter" value="0.0"/>
+
+    <run id="mcmc" spec="MCMC" chainLength="500000000" numInitializationAttempts="1000">
+      <state id="state" storeEvery="10000">
+        <stateNode id="startPopSize" spec="RealParameter" value="1.0" lower="0.0" upper="10000000"/>
+        <stateNode id="divRate1" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate2" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate3" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate4" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate5" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate6" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate7" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode id="divRate8" spec="RealParameter" value="0.0" lower="-Infinity"/>
+        <stateNode idref="fso"/>
+        <stateNode idref="tree"/>
+      </state>
+
+      <init spec="TipDateInitialiser" tree="@tree" finalSampleOffset="@fso"
+            adjustInternalNodes="true" internalNodeSpacing="1">
+        <tipDatesTrait spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                       traitValueCol="2" traitname="age" taxa="@taxa" skipFirstRow="true"/>
+      </init>
+
+      <distribution id="posterior" spec="util.CompoundDistribution">
+        <distribution spec="Coalescent" id="likelihood">
+          <treeIntervals spec='TreeIntervals' tree="@tree"/>
+          <populationModel spec="feast.popmodels.ShiftedPopulationModel" offset="@fso">
+            <populationModel spec="feast.popmodels.CompoundPopulationModel"
+                             changeTimes="@changeTimes" makeContinuous="true">
+              <populationModel spec="ExponentialGrowth" popSize="@startPopSize"
+                               growthRate="@divRate1"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate2"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate3"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate4"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate5"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate6"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate7"/>
+              <populationModel spec="ExponentialGrowth" popSize="1.0"
+                               growthRate="@divRate8"/>
+            </populationModel>
+          </populationModel>
+        </distribution>
+
+        <distribution id="prior" spec="util.CompoundDistribution">
+
+          <distribution id="rootHeightPrior" spec="Prior">
+            <Uniform name="distr" lower="0" upper="200.0"/>
+            <x idref="tree"/>
+          </distribution>
+
+          <distribution id="PopSizePrior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@startPopSize">
+              <LogNormal id="LogNormal.1" name="distr">
+                  <parameter id="RealParameter.17" spec="parameter.RealParameter" estimate="false" name="M">1.0</parameter>
+                  <parameter id="RealParameter.18" spec="parameter.RealParameter" estimate="false" lower="0.0" name="S" upper="5.0">1.25</parameter>
+              </LogNormal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate1Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate1">
+              <Normal id="Normal.1" name="distr">
+                <parameter id="RealParameter.1" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.2" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate2Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate2">
+              <Normal id="Normal.2" name="distr">
+                <parameter id="RealParameter.3" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.4" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate3Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate3">
+              <Normal id="Normal.3" name="distr">
+                <parameter id="RealParameter.5" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.6" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate4Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate4">
+              <Normal id="Normal.4" name="distr">
+                <parameter id="RealParameter.7" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.8" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate5Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate5">
+              <Normal id="Normal.5" name="distr">
+                <parameter id="RealParameter.9" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.10" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate6Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate6">
+              <Normal id="Normal.6" name="distr">
+                <parameter id="RealParameter.11" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.12" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate7Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate7">
+              <Normal id="Normal.7" name="distr">
+                <parameter id="RealParameter.13" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.14" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+          <distribution id="divRate8Prior" spec="util.CompoundDistribution">
+            <distribution spec="Prior" x="@divRate8">
+              <Normal id="Normal.8" name="distr">
+                <parameter id="RealParameter.15" spec="parameter.RealParameter" estimate="false" name="mean">0.0</parameter>
+                <parameter id="RealParameter.16" spec="parameter.RealParameter" estimate="false" name="sigma">0.5</parameter>
+              </Normal>
+            </distribution>
+          </distribution>
+
+         <distribution spec="TipDatePrior" tree="@tree" finalSampleOffset="@fso">
+           <earlierBound spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                         traitValueCol="1" traitname="age" taxa="@taxa"/>
+           <laterBound spec="TraitSetFromXSV" fileName="trees/tip_constraints.csv" sep=","
+                         traitValueCol="2" traitname="age" taxa="@taxa"/>
+         </distribution>
+        </distribution>
+      </distribution>
+
+      <operator id="startPopSizeScaler" spec="ScaleOperator" parameter="@startPopSize" scaleFactor="0.75" weight="10.0"/>
+      <operator id="divRate1Scaler" spec="RealRandomWalkOperator" parameter="@divRate1" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate2Scaler" spec="RealRandomWalkOperator" parameter="@divRate2" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate3Scaler" spec="RealRandomWalkOperator" parameter="@divRate3" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate4Scaler" spec="RealRandomWalkOperator" parameter="@divRate4" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate5Scaler" spec="RealRandomWalkOperator" parameter="@divRate5" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate6Scaler" spec="RealRandomWalkOperator" parameter="@divRate6" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate7Scaler" spec="RealRandomWalkOperator" parameter="@divRate7" windowSize="0.05" weight="10.0"/>
+      <operator id="divRate8Scaler" spec="RealRandomWalkOperator" parameter="@divRate8" windowSize="0.05" weight="10.0"/>
+
+      <operator id="tipDateOperator" spec="TipDateOperator"
+                tree="@tree" finalSampleOffset="@fso" windowSize="20"
+                weight="10"/>
+
+      <!-- estimate internal nodes ages -->
+      <operator id="fsoScaler" spec="ScaleOperator" parameter="@fso" scaleFactor="0.75" weight="3"/>
+      <operator id="nodeHeightOperator" spec="beast.evolution.operators.Uniform" tree="@tree" weight="10"/>
+      <operator id="treeScaler" spec="ScaleOperator" tree="@tree" scaleFactor="0.75" weight="10"/>
+      <operator id="treeScalerRoot" spec="ScaleOperator" rootOnly="true" tree="@tree" scaleFactor="0.75" weight="10"/>
+
+      <logger id="tracelog" fileName="results/$(filebase).$(tree_name).log" logEvery="20000">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+        <log idref="startPopSize"/>
+        <log idref="divRate1"/>
+        <log idref="divRate2"/>
+        <log idref="divRate3"/>
+        <log idref="divRate4"/>
+        <log idref="divRate5"/>
+        <log idref="divRate6"/>
+        <log idref="divRate7"/>
+        <log idref="divRate8"/>
+        <log idref="fso"/>
+        <log spec="beast.evolution.tree.TreeStatLogger" tree="@tree"/>
+      </logger>
+
+      <logger id="treelog" fileName="results/$(filebase).$(tree_name).trees" logEvery="100000">
+        <log idref="tree"/>
+      </logger>
+
+      <logger id="screenlog" logEvery="10000">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+        <log idref="fso"/>
+      </logger>
+
+    </run>
+  </beast>
