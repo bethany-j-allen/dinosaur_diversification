@@ -1,5 +1,5 @@
 # dinosaur_diversification
-This repository contains the data and code associated with Allen BJ, Volkova Oliveira MV, Stadler T, Vaughan TG, Warnock RCM (2024) Mechanistic phylodynamic models do not provide conclusive evidence that dinosaurs were in decline before their final extinction, Cambridge Prisms: Extinction, in press.
+This repository contains the data and code associated with Allen BJ, Volkova Oliveira MV, Stadler T, Vaughan TG, Warnock RCM (2024) Mechanistic phylodynamic models do not provide conclusive evidence that dinosaurs were in decline before their final extinction, Cambridge Prisms: Extinction, 2, e6.
 
 A tutorial showing how to run these analyses in BEAST2 is available on Taming the BEAST: https://taming-the-beast.org/tutorials/Skyline-analyses-for-macroevolution/
 
